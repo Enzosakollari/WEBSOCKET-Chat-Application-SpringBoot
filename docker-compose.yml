@@ -1,0 +1,28 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: enzo
+      MYSQL_DATABASE: websocketdb
+      MYSQL_USER: enzo
+      MYSQL_PASSWORD: enzo
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    depends_on:
+      - mysql
+    ports:
+      - "8081:8081"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: enzo
+      PMA_PASSWORD: enzo
+
+volumes:
+  mysql_data:

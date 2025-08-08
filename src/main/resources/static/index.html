@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Spring Chat App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="loginPage" class="centered-card">
+    <h2>Enter Chatroom</h2>
+    <input type="text" id="nickname" placeholder="Nickname" />
+    <input type="text" id="fullname" placeholder="Real Name" />
+    <button onclick="enterChatroom()">Enter Chatroom</button>
+</div>
+
+<div id="chatPage" class="chat-container hidden">
+    <div class="sidebar">
+        <h3>Online Users</h3>
+        <ul id="userList"></ul>
+        <p id="currentUser"></p>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <div class="chat-box">
+        <div id="messageContainer" class="messages"></div>
+        <div class="message-input">
+            <input type="text" id="messageInput" placeholder="Type your message..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
