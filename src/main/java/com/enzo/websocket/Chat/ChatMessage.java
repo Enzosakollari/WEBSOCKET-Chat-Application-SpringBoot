@@ -24,16 +24,23 @@ public class ChatMessage {
     @JoinColumn(name = "sender_nickname", referencedColumnName = "nickname")
     private User sender;
 
+
     @ManyToOne
     @JoinColumn(name = "receiver_nickname", referencedColumnName = "nickname")
     private User receiver;
 
 
+    @ManyToOne
+    @JoinColumn(name = "chat_room_id")
+    private ChatRoom chatRoom;
+
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+
+
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
-
-
 }

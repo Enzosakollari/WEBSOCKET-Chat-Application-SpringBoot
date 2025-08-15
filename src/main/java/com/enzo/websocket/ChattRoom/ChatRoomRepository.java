@@ -5,10 +5,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom,String> {
-
 
     @Query("SELECT c FROM ChatRoom c WHERE " +
             "(c.user1.nickname = :nickname1 AND c.user2.nickname = :nickname2) OR " +
@@ -18,8 +19,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom,String> {
             @Param("nickname2") String nickname2
     );
 
+    Optional<ChatRoom> findByChatId(String chatId);
 
-
+    @Query("SELECT c FROM ChatRoom c WHERE " +
+            "c.user1.nickname = :nickname OR " +
+            "c.user2.nickname = :nickname")
+    List<ChatRoom> findByUserNickname(@Param("nickname") String nickname);
 }
-
-
