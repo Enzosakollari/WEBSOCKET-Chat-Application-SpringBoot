@@ -1,65 +1,53 @@
 package com.enzo.websocket.ChattRoom;
 
-import com.enzo.websocket.User.User;
-import com.enzo.websocket.User.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
-    private final UserService userService;  // Use UserService instead of repository
 
-    public Optional<String> getChatRoomId(String senderNickname, String recipientNickname, boolean createIfNotFound) {
-        // Find existing chat room
-        Optional<ChatRoom> existingRoom = chatRoomRepository.findByUsers(senderNickname, recipientNickname);
-        if (existingRoom.isPresent()) {
-            return existingRoom.map(ChatRoom::getChatId);
-        }
+    public Optional<String> getChatRoomId(
+            String senderId,
+            String recipientId,
+            boolean createNewRoomIfNotExists
+    ) {
+        return chatRoomRepository
+                .findBySenderIdAndRecipientId(senderId, recipientId)
+                .map(ChatRoom::getChatId)
+                .or(() -> {
+                    if(createNewRoomIfNotExists) {
+                        var chatId = createChatId(senderId, recipientId);
+                        return Optional.of(chatId);
+                    }
 
-        if (!createIfNotFound) {
-            return Optional.empty();
-        }
+                    return  Optional.empty();
+                });
+    }
 
-        // Get users from service
-        User sender = userService.findByNickname(senderNickname)
-                .orElseThrow(() -> new RuntimeException("Sender not found"));
-        User recipient = userService.findByNickname(recipientNickname)
-                .orElseThrow(() -> new RuntimeException("Recipient not found"));
+    private String createChatId(String senderId, String recipientId) {
+        var chatId = String.format("%s_%s", senderId, recipientId);
 
-        String chatId = generateChatId(senderNickname, recipientNickname);
-
-        ChatRoom room = ChatRoom.builder()
-                .id(UUID.randomUUID().toString())
-                .user1(sender)
-                .user2(recipient)
+        ChatRoom senderRecipient = ChatRoom
+                .builder()
                 .chatId(chatId)
+                .senderId(senderId)
+                .recipientId(recipientId)
                 .build();
 
-        chatRoomRepository.save(room);
-        return Optional.of(chatId);
-    }
+        ChatRoom recipientSender = ChatRoom
+                .builder()
+                .chatId(chatId)
+                .senderId(recipientId)
+                .recipientId(senderId)
+                .build();
 
-    public Optional<ChatRoom> findByChatId(String chatId) {
-        return chatRoomRepository.findByChatId(chatId);
-    }
+        chatRoomRepository.save(senderRecipient);
+        chatRoomRepository.save(recipientSender);
 
-    public ChatRoom save(ChatRoom chatRoom) {
-        return chatRoomRepository.save(chatRoom);
-    }
-
-    public List<ChatRoom> findByUserNickname(String nickname) {
-        return chatRoomRepository.findByUserNickname(nickname);
-    }
-
-    private String generateChatId(String nickname1, String nickname2) {
-        return nickname1.compareTo(nickname2) < 0
-                ? nickname1 + "_" + nickname2
-                : nickname2 + "_" + nickname1;
+        return chatId;
     }
 }

@@ -1,46 +1,24 @@
 package com.enzo.websocket.Chat;
 
-import com.enzo.websocket.ChattRoom.ChatRoom;
-import jakarta.persistence.*;
-import lombok.*;
-import com.enzo.websocket.User.User;
-import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import java.util.Date;
 
 @Data
-@Entity
-@Table(name = "chat_messages")
-@Getter
-@Setter
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
+@Document
 public class ChatMessage {
     @Id
     private String id;
-
     private String chatId;
-
-    @ManyToOne
-    @JoinColumn(name = "sender_nickname", referencedColumnName = "nickname")
-    private User sender;
-
-
-    @ManyToOne
-    @JoinColumn(name = "receiver_nickname", referencedColumnName = "nickname")
-    private User receiver;
-
-
-    @ManyToOne
-    @JoinColumn(name = "chat_room_id")
-    private ChatRoom chatRoom;
-
-
-    @Column(nullable = false, columnDefinition = "TEXT")
+    private String senderId;
+    private String recipientId;
     private String content;
-
-
-
-    @Column(nullable = false, updatable = false)
-    @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private Date timestamp;
 }

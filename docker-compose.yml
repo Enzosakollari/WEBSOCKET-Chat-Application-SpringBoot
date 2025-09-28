@@ -1,28 +1,25 @@
+version: '3.8'
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql_db
-    environment:
-      MYSQL_ROOT_PASSWORD: enzo
-      MYSQL_DATABASE: websocketdb
-      MYSQL_USER: enzo
-      MYSQL_PASSWORD: enzo
+  mongodb:
+    image: mongo
+    container_name: mongo_db
     ports:
-      - "3306:3306"
+      - 27017:27017
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mongo:/data
+    # NO authentication environment variables
 
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: phpmyadmin
-    depends_on:
-      - mysql
+  mongo-express:
+    image: mongo-express
+    container_name: mongo_express
+    restart: always
     ports:
-      - "8081:8081"
+      - 8081:8081
     environment:
-      PMA_HOST: mysql
-      PMA_USER: enzo
-      PMA_PASSWORD: enzo
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=false
+    depends_on:
+      - mongodb
 
 volumes:
-  mysql_data:
+  mongo:

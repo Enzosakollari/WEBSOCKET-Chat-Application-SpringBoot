@@ -1,33 +1,21 @@
 package com.enzo.websocket.ChattRoom;
 
-import jakarta.persistence.*;
-import lombok.*;
-import com.enzo.websocket.User.User;
-import java.util.List;
-import com.enzo.websocket.Chat.ChatMessage;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "chat_rooms")
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
+@Document
 public class ChatRoom {
     @Id
     private String id;
-
-    @ManyToOne
-    @JoinColumn(name = "user1_nickname", referencedColumnName = "nickname", nullable = false)
-    private User user1;
-
-    @ManyToOne
-    @JoinColumn(name = "user2_nickname", referencedColumnName = "nickname", nullable = false)
-    private User user2;
-
-    @Column(unique = true, nullable = false)
-    private String chatId; // Unique identifier for the chat
-
-    @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ChatMessage> messages;
+    private String chatId;
+    private String senderId;
+    private String recipientId;
 }

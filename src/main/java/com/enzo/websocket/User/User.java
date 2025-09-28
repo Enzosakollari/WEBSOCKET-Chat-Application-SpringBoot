@@ -1,21 +1,19 @@
 package com.enzo.websocket.User;
 
-import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Getter @Setter
-@Entity
-@Table(name = "user")
+@Getter
+@Setter
+@Document
 public class User {
-
     @Id
-    @Column(name = "nickname", length = 50, unique = true, nullable = false)
-    private String nickname;  // Primary key
+    @JsonProperty("username")
+    private String nickName;
+    private String fullName;
+    private Status status;
 
-    @Column(nullable = false)
-    private String fullname;
-
-    @Enumerated(EnumType.STRING)
-    private Status status = Status.ONLINE; // Default value
 }

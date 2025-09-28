@@ -1,8 +1,9 @@
 package com.enzo.websocket.User;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.Optional;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface UserRepository extends JpaRepository<User, String> {
-    Optional<User> findByNickname(String nickname);  // Add this method
+import java.util.List;
+
+public interface UserRepository  extends MongoRepository<User, String> {
+    List<User> findAllByStatus(Status status);
 }
