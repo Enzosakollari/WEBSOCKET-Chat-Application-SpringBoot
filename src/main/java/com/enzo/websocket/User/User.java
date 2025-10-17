@@ -16,4 +16,5 @@ public class User {
     private String fullName;
     private Status status;
 
+
 }

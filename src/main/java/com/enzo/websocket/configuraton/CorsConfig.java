@@ -1,5 +1,5 @@
 // Create this in a new file: CorsConfig.java
-package com.enzo.websocket.config;
+package com.enzo.websocket.configuraton;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
