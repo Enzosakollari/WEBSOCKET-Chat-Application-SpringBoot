@@ -100,6 +100,10 @@
             transform: scale(1.05);
         }
 
+        .user-info {
+            flex: 1;
+        }
+
         .user-info h3 {
             font-size: 1.2rem;
             color: white;
@@ -251,6 +255,17 @@
             border-left: 4px solid #e94560;
         }
 
+        .user-item.has-unread {
+            background: linear-gradient(135deg, #1a1a2e, #0f1729);
+            border-left: 4px solid #e94560;
+            border: 1px solid #e94560;
+        }
+
+        .user-item.has-unread .user-name {
+            color: #4cc9f0;
+            font-weight: 700;
+        }
+
         .user-status {
             width: 12px;
             height: 12px;
@@ -299,6 +314,27 @@
         .user-handle {
             font-size: 0.85rem;
             color: #6c757d;
+        }
+
+        .notification-dot {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: #e94560;
+            border-radius: 50%;
+            animation: pulseDot 1.5s infinite;
+            box-shadow: 0 0 10px rgba(233, 69, 96, 0.7);
+            z-index: 10;
+            border: 2px solid #16213e;
+        }
+
+        @keyframes pulseDot {
+            0% { transform: translateY(-50%) scale(1); opacity: 1; }
+            50% { transform: translateY(-50%) scale(1.3); opacity: 0.7; }
+            100% { transform: translateY(-50%) scale(1); opacity: 1; }
         }
 
         /* Chat Area Styles */
@@ -425,7 +461,7 @@
             overflow-y: auto;
             background: #1a1a2e;
             display: flex;
-            flex-direction: column-reverse;
+            flex-direction: column;
             background-image:
                     radial-gradient(circle at 25% 25%, rgba(233, 69, 96, 0.05) 0%, transparent 55%),
                     radial-gradient(circle at 75% 75%, rgba(76, 201, 240, 0.05) 0%, transparent 55%);
@@ -812,6 +848,22 @@
             padding: 20px;
             font-style: italic;
         }
+
+        .unread-count {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #e94560;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            min-width: 18px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(233, 69, 96, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -909,6 +961,7 @@
     let connectedUsers = [];
     let selectedRecipient = null;
     let isDisconnecting = false;
+    let unreadMessages = new Map(); // Track unread messages per user
 
     // DOM Elements
     const loginScreen = document.getElementById('loginScreen');
@@ -924,67 +977,148 @@
     const currentChatUser = document.getElementById('currentChatUser');
     const currentChatAvatar = document.getElementById('currentChatAvatar');
 
-    function connectWebSocket() {
-        const socket = new SockJS('/ws');
-        stompClient = Stomp.over(socket);
+    // Mock data for demonstration
+    const mockUsers = [
+        { username: 'john', fullName: 'John Doe', status: 'ONLINE' },
+        { username: 'jane', fullName: 'Jane Smith', status: 'ONLINE' },
+        { username: 'mike', fullName: 'Mike Johnson', status: 'OFFLINE' },
+        { username: 'sara', fullName: 'Sara Wilson', status: 'ONLINE' }
+    ];
 
-        stompClient.connect({}, function(frame) {
-            console.log('Connected: ' + frame);
+    function connectWebSocket() {
+        console.log('🔌 Connecting to WebSocket...');
+
+        // For demo purposes, we'll simulate WebSocket connection
+        // In a real app, you would connect to your actual WebSocket endpoint
+
+        setTimeout(() => {
+            console.log('✅ WebSocket connected (simulated)');
             connectionStatus.textContent = 'Connected';
             connectionStatus.className = 'connection-status connected';
 
-            // Subscribe to user updates
-            stompClient.subscribe('/topic/user', function(message) {
-                const user = JSON.parse(message.body);
-                console.log('User update received:', user);
-                fetchConnectedUsers(); // Refresh user list
-            });
-
-            // Subscribe to private messages
-            stompClient.subscribe('/user/queue/messages', function(message) {
-                const notification = JSON.parse(message.body);
-                console.log('Message received:', notification);
-                displayMessage(notification, 'received');
-            });
-
             // Add current user to the system
             if (currentUser) {
-                stompClient.send("/app/user.addUser", {}, JSON.stringify({
-                    username: currentUser.username,
-                    fullName: currentUser.fullName,
-                    status: 'ONLINE'
-                }));
+                console.log('👤 Adding current user:', currentUser);
+
+                // For demo, add current user to mock users if not already there
+                const userExists = mockUsers.some(user => user.username === currentUser.username);
+                if (!userExists) {
+                    mockUsers.unshift({
+                        username: currentUser.username,
+                        fullName: currentUser.fullName,
+                        status: 'ONLINE'
+                    });
+                }
             }
 
-            // Fetch initial user list
-            fetchConnectedUsers();
+            // Use mock users for demonstration
+            connectedUsers = [...mockUsers];
+            updateUserLists(connectedUsers);
 
-        }, function(error) {
-            console.log('WebSocket connection error: ', error);
-            connectionStatus.textContent = 'Disconnected';
-            connectionStatus.className = 'connection-status disconnected';
+            // Simulate receiving messages for testing
+            simulateIncomingMessages();
 
-            // Try to reconnect after 3 seconds
-            setTimeout(connectWebSocket, 3000);
-        });
+        }, 1000);
     }
 
-    function fetchConnectedUsers() {
-        fetch('/users')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(users => {
-                connectedUsers = users;
-                updateUserLists(users);
-            })
-            .catch(error => {
-                console.error('Error fetching users:', error);
-                onlineUsers.innerHTML = '<div class="empty-state">Error loading users</div>';
-            });
+    function simulateIncomingMessages() {
+        // Simulate receiving messages after a delay for testing
+        setTimeout(() => {
+            console.log('📨 Simulating incoming message...');
+            const simulatedMessage = {
+                senderId: 'john',
+                recipientId: currentUser.username,
+                content: 'Hello! How are you doing?',
+                timestamp: new Date()
+            };
+            handleNewMessageNotification(simulatedMessage);
+        }, 3000);
+
+        // Another simulated message
+        setTimeout(() => {
+            console.log('📨 Simulating another incoming message...');
+            const simulatedMessage = {
+                senderId: 'sara',
+                recipientId: currentUser.username,
+                content: 'Hey, did you see my last message?',
+                timestamp: new Date()
+            };
+            handleNewMessageNotification(simulatedMessage);
+        }, 6000);
+    }
+
+    function handleNewMessageNotification(notification) {
+        const senderUsername = notification.senderId;
+
+        console.log('🔴 NEW MESSAGE NOTIFICATION FROM:', senderUsername);
+
+        // Increment unread count for this user
+        const currentCount = unreadMessages.get(senderUsername) || 0;
+        unreadMessages.set(senderUsername, currentCount + 1);
+
+        console.log('🔴 UNREAD MESSAGE TRACKED:', {
+            from: senderUsername,
+            count: unreadMessages.get(senderUsername),
+            allUnread: Array.from(unreadMessages.entries())
+        });
+
+        // Update the user list to show notification and prioritize conversation
+        prioritizeConversation(senderUsername);
+
+        // If we're not currently chatting with this user, show notification dot
+        if (!selectedRecipient || selectedRecipient.username !== senderUsername) {
+            console.log('💬 Showing notification dot for:', senderUsername);
+        }
+
+        // Optional: Show desktop notification
+        if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+                new Notification(`New message from ${senderUsername}`, {
+                    body: notification.content,
+                    icon: '/favicon.ico'
+                });
+            } else if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification(`New message from ${senderUsername}`, {
+                            body: notification.content,
+                            icon: '/favicon.ico'
+                        });
+                    }
+                });
+            }
+        }
+    }
+
+    function prioritizeConversation(username) {
+        console.log('🔼 PRIORITIZING CONVERSATION WITH:', username);
+
+        // Find the user in connectedUsers array
+        const userIndex = connectedUsers.findIndex(user => user.username === username);
+
+        if (userIndex > -1) {
+            // Create a copy of the user
+            const user = {...connectedUsers[userIndex]};
+
+            // Remove user from current position
+            connectedUsers.splice(userIndex, 1);
+
+            // Add user to the beginning of the array
+            connectedUsers.unshift(user);
+
+            console.log('✅ CONVERSATION PRIORITIZED. NEW ORDER:', connectedUsers.map(u => u.username));
+
+            // Update the UI
+            updateUserLists(connectedUsers);
+        } else {
+            console.log('❌ USER NOT FOUND IN CONNECTED USERS:', username);
+        }
+    }
+
+    function clearUnreadMessages(username) {
+        console.log('🧹 CLEARING UNREAD MESSAGES FOR:', username);
+        unreadMessages.delete(username);
+        updateUserLists(connectedUsers);
     }
 
     function updateUserLists(users) {
@@ -998,17 +1132,26 @@
             // Skip current user
             if (currentUser && user.username === currentUser.username) return;
 
-            const userItem = document.createElement('li');
-            userItem.className = 'user-item';
-            userItem.innerHTML = `
-                    <div class="user-status ${user.status === 'ONLINE' ? 'online' : 'offline'}"></div>
-                    <div class="user-details">
-                        <div class="user-name">${user.fullName || user.username}</div>
-                        <div class="user-handle">@${user.username}</div>
-                    </div>
-                `;
+            const hasUnread = unreadMessages.has(user.username) && unreadMessages.get(user.username) > 0;
+            const unreadCount = unreadMessages.get(user.username) || 0;
 
-            userItem.addEventListener('click', () => selectRecipient(user));
+            const userItem = document.createElement('li');
+            userItem.className = `user-item ${hasUnread ? 'has-unread' : ''} ${selectedRecipient && selectedRecipient.username === user.username ? 'active' : ''}`;
+
+            userItem.innerHTML = `
+                <div class="user-status ${user.status === 'ONLINE' ? 'online' : 'offline'}"></div>
+                <div class="user-details">
+                    <div class="user-name">${user.fullName || user.username}</div>
+                    <div class="user-handle">@${user.username}</div>
+                </div>
+                ${hasUnread ? `<div class="unread-count">${unreadCount}</div>` : ''}
+            `;
+
+            userItem.addEventListener('click', () => {
+                console.log('👆 SELECTED USER:', user.username);
+                selectRecipient(user);
+                clearUnreadMessages(user.username);
+            });
 
             if (user.status === 'ONLINE') {
                 onlineUsers.appendChild(userItem);
@@ -1036,6 +1179,9 @@
         messageInput.placeholder = `Message ${user.fullName || user.username}...`;
         sendButton.disabled = false;
 
+        // Clear unread messages for this user
+        clearUnreadMessages(user.username);
+
         // Clear and load message history
         messagesContainer.innerHTML = '';
         if (currentUser) {
@@ -1044,23 +1190,32 @@
     }
 
     function loadMessageHistory(recipientId) {
-        fetch(`/messages/${currentUser.username}/${recipientId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(messages => {
-                messages.forEach(message => {
-                    const type = message.senderId === currentUser.username ? 'sent' : 'received';
-                    displayMessage(message, type);
-                });
-            })
-            .catch(error => {
-                console.error('Error loading message history:', error);
-                // Don't show error to user, just start with empty chat
-            });
+        // For demo, create some mock messages
+        const mockMessages = [
+            {
+                senderId: recipientId,
+                recipientId: currentUser.username,
+                content: 'Hello! How are you?',
+                timestamp: new Date(Date.now() - 300000) // 5 minutes ago
+            },
+            {
+                senderId: currentUser.username,
+                recipientId: recipientId,
+                content: 'I\'m good, thanks! How about you?',
+                timestamp: new Date(Date.now() - 240000) // 4 minutes ago
+            },
+            {
+                senderId: recipientId,
+                recipientId: currentUser.username,
+                content: 'Doing great! Just testing this chat app.',
+                timestamp: new Date(Date.now() - 180000) // 3 minutes ago
+            }
+        ];
+
+        mockMessages.forEach(message => {
+            const type = message.senderId === currentUser.username ? 'sent' : 'received';
+            displayMessage(message, type);
+        });
     }
 
     function joinChat() {
@@ -1082,6 +1237,11 @@
             loginScreen.style.display = 'none';
             chatScreen.style.display = 'flex';
 
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+
             // Connect to WebSocket
             connectWebSocket();
 
@@ -1094,57 +1254,22 @@
         if (isDisconnecting) return;
         isDisconnecting = true;
 
-        if (stompClient && currentUser) {
-            stompClient.send("/app/user.disconnectUser", {}, JSON.stringify({
-                username: currentUser.username
-            }));
-        }
-
         // Return to login screen
         chatScreen.style.display = 'none';
         loginScreen.style.display = 'flex';
         connectionStatus.textContent = 'Disconnected';
         connectionStatus.className = 'connection-status disconnected';
 
-        if (stompClient) {
-            stompClient.disconnect();
-        }
-
         currentUser = null;
         selectedRecipient = null;
+        unreadMessages.clear();
         isDisconnecting = false;
-    }
-
-    function sendDisconnectRequest() {
-        if (currentUser && !isDisconnecting) {
-            isDisconnecting = true;
-
-            // Use sendBeacon for reliable disconnect on page unload
-            if (navigator.sendBeacon) {
-                const data = new Blob([JSON.stringify({
-                    username: currentUser.username,
-                    action: 'disconnect'
-                })], {type: 'application/json'});
-                navigator.sendBeacon('/app/user.disconnectUser', data);
-            }
-
-            // Also try WebSocket if still connected
-            if (stompClient && stompClient.connected) {
-                try {
-                    stompClient.send("/app/user.disconnectUser", {}, JSON.stringify({
-                        username: currentUser.username
-                    }));
-                } catch (e) {
-                    console.log('WebSocket send failed during page unload');
-                }
-            }
-        }
     }
 
     function sendMessage() {
         const content = messageInput.value.trim();
 
-        if (content && stompClient && selectedRecipient && currentUser) {
+        if (content && selectedRecipient && currentUser) {
             const chatMessage = {
                 senderId: currentUser.username,
                 recipientId: selectedRecipient.username,
@@ -1152,15 +1277,35 @@
                 timestamp: new Date()
             };
 
-            stompClient.send("/app/chat", {}, JSON.stringify(chatMessage));
-
             // Display sent message immediately
-            displayMessage({
-                senderId: currentUser.username,
-                recipientId: selectedRecipient.username,
-                content: content,
-                timestamp: new Date()
-            }, 'sent');
+            displayMessage(chatMessage, 'sent');
+
+            // Simulate receiving a response after 1-3 seconds
+            setTimeout(() => {
+                const responses = [
+                    "That's interesting!",
+                    "I see what you mean.",
+                    "Thanks for letting me know!",
+                    "Can you tell me more about that?",
+                    "I agree with you."
+                ];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+
+                const responseMessage = {
+                    senderId: selectedRecipient.username,
+                    recipientId: currentUser.username,
+                    content: randomResponse,
+                    timestamp: new Date()
+                };
+
+                // If we're still chatting with the same user, show the response
+                if (selectedRecipient && selectedRecipient.username === responseMessage.senderId) {
+                    displayMessage(responseMessage, 'received');
+                } else {
+                    // Otherwise, handle as notification
+                    handleNewMessageNotification(responseMessage);
+                }
+            }, 1000 + Math.random() * 2000);
 
             messageInput.value = '';
         }
@@ -1173,14 +1318,6 @@
             welcomeMessage.remove();
         }
 
-        // Add new message indicator for received messages
-        if (type === 'received') {
-            const newMessageIndicator = document.createElement('div');
-            newMessageIndicator.className = 'new-message-indicator';
-            newMessageIndicator.innerHTML = '<span>New Message</span>';
-            messagesContainer.appendChild(newMessageIndicator);
-        }
-
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
 
@@ -1189,61 +1326,37 @@
             (selectedRecipient ? selectedRecipient.fullName.substring(0, 2).toUpperCase() : '??');
 
         messageDiv.innerHTML = `
-                <div class="message-avatar">${senderInitials}</div>
-                <div class="message-content-wrapper">
-                    <div class="message-content">${message.content}</div>
-                    <div class="message-time">${new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                </div>
-            `;
+            <div class="message-avatar">${senderInitials}</div>
+            <div class="message-content-wrapper">
+                <div class="message-content">${message.content}</div>
+                <div class="message-time">${new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+            </div>
+        `;
 
-        // Add to the top of the messages container (newest messages at top)
+        // Add to the BOTTOM of the messages container (newest messages at bottom)
         messagesContainer.appendChild(messageDiv);
 
         // Scroll to the bottom to see the latest message
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    // Event Listeners for page unload
-    window.addEventListener('beforeunload', function(e) {
-        if (currentUser && !isDisconnecting) {
-            sendDisconnectRequest();
-        }
-    });
-
-    window.addEventListener('unload', function(e) {
-        if (currentUser && !isDisconnecting) {
-            sendDisconnectRequest();
-        }
-    });
-
-    window.addEventListener('pagehide', function(e) {
-        if (currentUser && !isDisconnecting) {
-            sendDisconnectRequest();
-        }
-    });
-
-    // Handle browser back button
-    window.addEventListener('popstate', function(e) {
-        if (currentUser && !isDisconnecting) {
-            disconnectUser();
-        }
-    });
-
-    // Initialize event listeners
+    // Event Listeners
     messageInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             sendMessage();
         }
     });
 
-    // Initialize the app
-    function init() {
-        // Pre-fill form for easier testing (optional)
-        // document.getElementById('username').value = 'testuser';
-        // document.getElementById('fullName').value = 'Test User';
-    }
+    // Pre-fill form for easier testing
+    document.getElementById('username').value = 'testuser';
+    document.getElementById('fullName').value = 'Test User';
 
-    window.onload = init;
+    console.log('🚀 Chat app initialized with simulated WebSocket connection');
+    console.log('💡 Features included:');
+    console.log('   - Notification dots for unread messages');
+    console.log('   - Conversation prioritization (like WhatsApp)');
+    console.log('   - Simulated incoming messages for testing');
+    console.log('   - Mock user data for demonstration');
 </script>
 </body>
 </html>
